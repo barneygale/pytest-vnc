@@ -4,9 +4,6 @@ pytest-vnc: capture screen and send keyboard & mouse
 .. image:: https://img.shields.io/badge/source-github-orange
     :target: https://github.com/barneygale/pytest-vnc
 
-.. image:: https://readthedocs.org/projects/pytest-vnc/badge/?version=latest&style=flat-square
-    :target: https://pytest-vnc.readthedocs.io/en/latest/?badge=latest
-
 .. image:: https://img.shields.io/pypi/v/pytest-vnc?style=flat-square
     :target: https://pypi.org/project/pytest-vnc
 
