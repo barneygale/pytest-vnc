@@ -1,5 +1,5 @@
-pytest-vnc: cross-platform keyboard, video and mouse for pytest
-===============================================================
+pytest-vnc: capture screen and send keyboard & mouse
+====================================================
 
 .. image:: https://img.shields.io/badge/source-github-orange
     :target: https://github.com/barneygale/pytest-vnc
@@ -12,8 +12,8 @@ pytest-vnc: cross-platform keyboard, video and mouse for pytest
 
 .. highlight:: python
 
-pytest-vnc is a pytest plugin that sends mouse and keyboard input and captures the screen using the VNC protocol. It is
-implemented in pure python and works on Mac, Linux and Windows. Use it like this::
+pytest-vnc is a pytest plugin that implements a VNC client in pure Python. You can use it to capture screenshots and
+send keyboard & mouse input. It works on Mac, Linux and Windows. Use it like this::
 
     def test_thing(vnc):
         # Keyboard input
