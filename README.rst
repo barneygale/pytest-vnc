@@ -16,6 +16,12 @@ pytest-vnc is a pytest plugin that implements a VNC client in pure Python. You c
 send keyboard & mouse input. It works on Mac, Linux and Windows. Use it like this::
 
     def test_thing(vnc):
+        # Screenshot
+        pixels = vnc.capture()
+        pixels = vnc.capture(x=0, y=0, width=vnc.width, height=vnc.height)
+        # to use PIL/pillow:
+        # image = Image.fromarray(pixels)
+
         # Keyboard input
         vnc.write('hi there!')  # keys are queued
         vnc.press('Ctrl', 'c')  # keys are stacked
@@ -32,12 +38,10 @@ send keyboard & mouse input. It works on Mac, Linux and Windows. Use it like thi
         vnc.scroll_down(repeat=10)
         with vnc.drag():
             vnc.move(300, 400)
-
-        # Screenshot
-        pixels = vnc.capture()
-        pixels = vnc.capture(x=0, y=0, width=vnc.width, height=vnc.height)
-        # to use PIL/pillow:
-        # image = Image.fromarray(pixels)
+        with vnc.middle_drag():
+            vnc.move(500, 600)
+        with vnc.right_drag():
+            vnc.move(700, 800)
 
 
 Installation

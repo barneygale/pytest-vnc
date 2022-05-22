@@ -292,6 +292,24 @@ class VNC:
             self.mouse_buttons &= ~mask
             self._write_mouse()
 
+    @contextmanager
+    def middle_drag(self):
+        """
+        Context manager that presses the middle mouse button on enter, and releases it on exit.
+        """
+
+        with self.drag(1):
+            yield
+
+    @contextmanager
+    def right_drag(self):
+        """
+        Context manager that presses the middle mouse button on enter, and releases it on exit.
+        """
+
+        with self.drag(2):
+            yield
+
     def click(self, button: int = 0):
         """
         Presses and releases a mouse button.
