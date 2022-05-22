@@ -10,6 +10,7 @@ pytest-vnc: cross-platform keyboard, video and mouse for pytest
 .. image:: https://img.shields.io/pypi/v/pytest-vnc?style=flat-square
     :target: https://pypi.org/project/pytest-vnc
 
+.. highlight:: python
 
 pytest-vnc is a pytest plugin that sends mouse and keyboard input and captures the screen using the VNC protocol. It is
 implemented in pure python and works on Mac, Linux and Windows. Use it like this::
@@ -52,7 +53,7 @@ Install pytest-vnc by running::
 Configuration
 -------------
 
-The following configuration options can be set in :file:`pytest.ini`:
+The following configuration options can be set in ``pytest.ini``:
 
 ``vnc_host``
   VNC hostname (default: localhost)
@@ -63,16 +64,6 @@ The following configuration options can be set in :file:`pytest.ini`:
 ``vnc_timeout``
   VNC connection timeout in seconds (default: 5)
 ``vnc_user``
-  VNC username (default: :env:`PYTEST_VNC_USER` or current user)
+  VNC username (default: env var: ``PYTEST_VNC_USER`` or current user)
 ``vnc_passwd``
-  VNC password (default: :env:`PYTEST_VNC_PASSWD`)
-
-The following environment variables can be set:
-
-.. envvar:: PYTEST_VNC_USER
-
-    The VNC username to use.
-
-.. envvar:: PYTEST_VNC_PASSWD
-
-    The VNC password to use.
+  VNC password (default: env var: ``PYTEST_VNC_PASSWD``)
