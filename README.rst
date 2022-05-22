@@ -14,8 +14,9 @@ send keyboard & mouse input. It works on Mac, Linux and Windows. Use it like thi
 
     def test_thing(vnc):
         # Screenshot
-        pixels = vnc.capture()
-        pixels = vnc.capture(x=0, y=0, width=vnc.width, height=vnc.height)
+        print(vnc.width, vnc.height)
+        pixels = vnc.capture()  # rgba numpy array of entire screen
+        pixels = vnc.capture(x=100, y=0, width=50, height=75)
         # to use PIL/pillow:
         # image = Image.fromarray(pixels)
 

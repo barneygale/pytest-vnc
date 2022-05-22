@@ -79,10 +79,10 @@ def pytest_addoption(parser):
     Adds VNC-related configuration options to the pytest argument parser.
     """
 
-    parser.addini('vnc_host', 'vnc host (default: localhost)', default='localhost')
-    parser.addini('vnc_port', 'vnc port (default: 5900)', default=5900)
-    parser.addini('vnc_speed', 'vnc interactions per second (default: 20)', default=20.0)
-    parser.addini('vnc_timeout', 'vnc connection timeout in seconds (default: 5)', default=5.0)
+    parser.addini('vnc_host', 'vnc host (default: localhost)')
+    parser.addini('vnc_port', 'vnc port (default: 5900)')
+    parser.addini('vnc_speed', 'vnc interactions per second (default: 20)')
+    parser.addini('vnc_timeout', 'vnc connection timeout in seconds (default: 5)')
     parser.addini('vnc_user', 'vnc username (default: env: PYTEST_VNC_USER or current user)')
     parser.addini('vnc_passwd', 'vnc password (default: env: PYTEST_VNC_PASSWD)')
 
@@ -94,10 +94,10 @@ def vnc(pytestconfig):
     """
 
     # Load client config
-    host = pytestconfig.getini('vnc_host')
-    port = int(pytestconfig.getini('vnc_port'))
-    speed = float(pytestconfig.getini('vnc_speed'))
-    timeout = float(pytestconfig.getini('vnc_timeout'))
+    host = pytestconfig.getini('vnc_host') or 'localhost'
+    port = int(pytestconfig.getini('vnc_port') or '5900')
+    speed = float(pytestconfig.getini('vnc_speed') or '20.0')
+    timeout = float(pytestconfig.getini('vnc_timeout') or '5.0')
     user = pytestconfig.getini('vnc_user') or environ.get('PYTEST_VNC_USER') or getuser()
     passwd = pytestconfig.getini('vnc_passwd') or environ.get('PYTEST_VNC_PASSWD')
 
@@ -115,12 +115,12 @@ def vnc(pytestconfig):
             sock.sendall(auth_type.to_bytes(1, 'big'))
             break
     else:
-        raise ValueError(f'unsupported auth types: {auth_types}')
+        raise ValueError(f'unsupported VNC auth types: {auth_types}')
 
     # Apple authentication
     if auth_type == 33:
         if not passwd:
-            raise ValueError('server requires password')
+            raise ValueError('VNC server requires password')
         sock.sendall(b'\x00\x00\x00\x0a\x01\x00RSA1\x00\x00\x00\x00')
         read(sock, 6)  # padding
         host_key = load_der_public_key(read(sock, read_int(sock, 4)))
@@ -136,7 +136,7 @@ def vnc(pytestconfig):
     # VNC authentication
     if auth_type == 1:
         if not passwd:
-            raise ValueError('server requires password')
+            raise ValueError('VNC server requires password')
         des_key = passwd.encode('ascii')[:8].ljust(8, b'\x00')
         encryptor = Cipher(TripleDES(des_key * 3), ECB()).encryptor()
         sock.sendall(encryptor.update(read(sock, 16)) + encryptor.finalize())
@@ -146,9 +146,9 @@ def vnc(pytestconfig):
     if auth_result == 0:
         pass
     elif auth_result == 1:
-        raise PermissionError('auth failed')
+        raise PermissionError('VNC auth failed')
     elif auth_result == 2:
-        raise PermissionError('auth failed (too many attempts)')
+        raise PermissionError('VNC auth failed (too many attempts)')
     else:
         reason = read(sock, auth_result)
         raise PermissionError(reason.decode('utf-8'))
@@ -223,20 +223,21 @@ class VNC:
             elif update_type == 0:  # video
                 read(self.sock, 1)  # padding
                 for _ in range(read_int(self.sock, 2)):
-                    ax = read_int(self.sock, 2)
-                    ay = read_int(self.sock, 2)
-                    aw = read_int(self.sock, 2)
-                    ah = read_int(self.sock, 2)
-                    ae = read_int(self.sock, 4)
-                    if ae == 0:  # Raw
-                        area = read(self.sock, ah * aw * 4)
-                    elif ae == 6:  # ZLib
+                    area_x = read_int(self.sock, 2)
+                    area_y = read_int(self.sock, 2)
+                    area_width = read_int(self.sock, 2)
+                    area_height = read_int(self.sock, 2)
+                    area_encoding = read_int(self.sock, 4)
+                    if area_encoding == 0:  # Raw
+                        area = read(self.sock, area_height * area_width * 4)
+                    elif area_encoding == 6:  # ZLib
                         area = read(self.sock, read_int(self.sock, 4))
                         area = self.decompress(area)
                     else:
-                        raise ValueError(ae)
-                    pixels[ay:ay + ah, ax:ax + aw] = np.ndarray((ah, aw, 4), 'B', area)
-                    pixels[ay:ay + ah, ax:ax + aw, self.mode.index('a')] = 255
+                        raise ValueError(f'unsupported VNC encoding: {area_encoding}')
+                    area = np.ndarray((area_height, area_width, 4), 'B', area)
+                    pixels[area_y:area_y + area_height, area_x:area_x + area_width] = area
+                    pixels[area_y:area_y + area_height, area_x:area_x + area_width, self.mode.index('a')] = 255
                 area = pixels[y:y+height, x:x+width]
                 if area[:, :, self.mode.index('a')].all():
                     if self.mode == 'rgba':
