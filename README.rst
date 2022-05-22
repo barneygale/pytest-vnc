@@ -24,7 +24,7 @@ capture screenshots and send keyboard & mouse from your pytest tests:
         # Keyboard input
         vnc.write('hi there!')  # keys are queued
         vnc.press('Ctrl', 'c')  # keys are stacked
-        with client.keyboard.hold('Ctrl'):
+        with vnc.hold('Ctrl'):
             vnc.press('Esc')
 
         # Mouse input
