@@ -110,7 +110,7 @@ def vnc(pytestconfig):
 
     # Negotiate an authentication type
     auth_types = set(read(sock, read_int(sock, 1)))
-    for auth_type in (33, 0, 1):
+    for auth_type in (33, 1, 2):
         if auth_type in auth_types:
             sock.sendall(auth_type.to_bytes(1, 'big'))
             break
@@ -134,11 +134,12 @@ def vnc(pytestconfig):
         read(sock, 4)  # padding
 
     # VNC authentication
-    if auth_type == 1:
+    if auth_type == 2:
         if not passwd:
             raise ValueError('VNC server requires password')
         des_key = passwd.encode('ascii')[:8].ljust(8, b'\x00')
-        encryptor = Cipher(TripleDES(des_key * 3), ECB()).encryptor()
+        des_key = bytes(int(bin(n)[:1:-1], 2) for n in des_key)
+        encryptor = Cipher(TripleDES(des_key), ECB()).encryptor()
         sock.sendall(encryptor.update(read(sock, 16)) + encryptor.finalize())
 
     # Check auth result
