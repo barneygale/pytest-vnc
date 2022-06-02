@@ -158,12 +158,19 @@ def vnc(pytestconfig):
     sock.sendall(b'\x01')
     width = read_int(sock, 2)
     height = read_int(sock, 2)
-    mode = video_modes[read(sock, 13)]
+    mode_data = bytearray(read(sock, 13))
+    mode_data[2] &= 1
+    mode_data[3] &= 1
+    mode = video_modes.get(bytes(mode_data))
     read(sock, 3)  # padding
     read(sock, read_int(sock, 4))
     decompress = decompressobj().decompress
 
-    # Set encodings
+    # Set pixel format and encodings
+    if mode is None:
+        mode = 'rgba'
+        sock.sendall(b'\x00\x00\x00\x00\x20\x18\x00\x01\x00\xff'
+                     b'\x00\xff\x00\xff\x00\x08\x10\x00\x00\x00')
     sock.sendall(b'\x02\x00\x00\x01\x00\x00\x00\x06')
     return VNC(sock, decompress, mode, width, height, speed)
 
