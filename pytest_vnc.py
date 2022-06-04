@@ -231,6 +231,9 @@ class VNC:
                 result = pixels[y:y + height, x:x + width]
                 if result[:, :, 3].all():
                     return result
+            else:
+                raise ValueError(f'unsupported VNC update type: {update_type}')
+
 
     @contextmanager
     def hold(self, *keys: str):
