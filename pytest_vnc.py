@@ -33,15 +33,6 @@ key_codes['Shift'] = key_codes['Shift_L']
 key_codes['Backspace'] = key_codes['BackSpace']
 
 
-# Colour channel orders
-video_modes: Dict[bytes, str] = {
-     b'\x20\x18\x00\x01\x00\xff\x00\xff\x00\xff\x10\x08\x00': 'bgra',
-     b'\x20\x18\x00\x01\x00\xff\x00\xff\x00\xff\x00\x08\x10': 'rgba',
-     b'\x20\x18\x01\x01\x00\xff\x00\xff\x00\xff\x10\x08\x00': 'argb',
-     b'\x20\x18\x01\x01\x00\xff\x00\xff\x00\xff\x00\x08\x10': 'abgr',
-}
-
-
 def read(sock: socket, length: int) -> bytes:
     """
     Read *length* bytes from the given socket.
@@ -154,25 +145,17 @@ def vnc(pytestconfig):
         reason = read(sock, auth_result)
         raise PermissionError(reason.decode('utf-8'))
 
-    # Read video settings
+    # Negotiate pixel format and encodings
     sock.sendall(b'\x01')
     width = read_int(sock, 2)
     height = read_int(sock, 2)
-    mode_data = bytearray(read(sock, 13))
-    mode_data[2] &= 1
-    mode_data[3] &= 1
-    mode = video_modes.get(bytes(mode_data))
-    read(sock, 3)  # padding
+    read(sock, 16)
     read(sock, read_int(sock, 4))
-    decompress = decompressobj().decompress
-
-    # Set pixel format and encodings
-    if mode is None:
-        mode = 'rgba'
-        sock.sendall(b'\x00\x00\x00\x00\x20\x18\x00\x01\x00\xff'
-                     b'\x00\xff\x00\xff\x00\x08\x10\x00\x00\x00')
-    sock.sendall(b'\x02\x00\x00\x01\x00\x00\x00\x06')
-    return VNC(sock, decompress, mode, width, height, speed)
+    sock.sendall(b'\x00\x00\x00\x00'
+                 b'\x20\x18\x00\x01\x00\xff\x00\xff'
+                 b'\x00\xff\x00\x08\x10\x00\x00\x00'
+                 b'\x02\x00\x00\x01\x00\x00\x00\x06')
+    return VNC(sock, decompressobj().decompress, width, height, speed)
 
 
 @dataclass
@@ -183,7 +166,6 @@ class VNC:
 
     sock: socket = field(repr=False)
     decompress: Callable[[bytes], bytes] = field(repr=False)
-    mode: str
     width: int
     height: int
     speed: float
@@ -245,18 +227,10 @@ class VNC:
                         raise ValueError(f'unsupported VNC encoding: {area_encoding}')
                     area = np.ndarray((area_height, area_width, 4), 'B', area)
                     pixels[area_y:area_y + area_height, area_x:area_x + area_width] = area
-                    pixels[area_y:area_y + area_height, area_x:area_x + area_width, self.mode.index('a')] = 255
-                area = pixels[y:y+height, x:x+width]
-                if area[:, :, self.mode.index('a')].all():
-                    if self.mode == 'rgba':
-                        return area
-                    if self.mode == 'abgr':
-                        return area[:, :, ::-1]
-                    return np.dstack((
-                        area[:, :, self.mode.index('r')],
-                        area[:, :, self.mode.index('g')],
-                        area[:, :, self.mode.index('b')],
-                        area[:, :, self.mode.index('a')]))
+                    pixels[area_y:area_y + area_height, area_x:area_x + area_width, 3] = 255
+                result = pixels[y:y + height, x:x + width]
+                if result[:, :, 3].all():
+                    return result
 
     @contextmanager
     def hold(self, *keys: str):
