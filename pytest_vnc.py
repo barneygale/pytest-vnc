@@ -129,7 +129,7 @@ def vnc(pytestconfig):
         if not passwd:
             raise ValueError('VNC server requires password')
         des_key = passwd.encode('ascii')[:8].ljust(8, b'\x00')
-        des_key = bytes(int(bin(n)[:1:-1], 2) for n in des_key)
+        des_key = bytes(int(bin(n)[:1:-1].ljust(8, '0'), 2) for n in des_key)
         encryptor = Cipher(TripleDES(des_key), ECB()).encryptor()
         sock.sendall(encryptor.update(read(sock, 16)) + encryptor.finalize())
 
