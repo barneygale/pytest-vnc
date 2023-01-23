@@ -106,7 +106,9 @@ def vnc(pytestconfig):
             sock.sendall(auth_type.to_bytes(1, 'big'))
             break
     else:
-        raise ValueError(f'unsupported VNC auth types: {auth_types}')
+        auth_type = None
+        if len(auth_types) > 0:
+            raise ValueError(f'unsupported VNC auth types: {auth_types}')
 
     # Apple authentication
     if auth_type == 33:
