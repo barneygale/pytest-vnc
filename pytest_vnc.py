@@ -234,7 +234,6 @@ class VNC:
             else:
                 raise ValueError(f'unsupported VNC update type: {update_type}')
 
-
     @contextmanager
     def hold(self, *keys: str):
         """
@@ -244,7 +243,7 @@ class VNC:
         with ExitStack() as stack:
             for key in keys:
                 stack.enter_context(self._write_key(key))
-            yield
+            yield self
 
     def press(self, *keys: str):
         """
@@ -253,6 +252,7 @@ class VNC:
 
         with self.hold(*keys):
             pass
+        return self
 
     def write(self, text: str):
         """
@@ -262,6 +262,7 @@ class VNC:
         for key in text:
             with self.hold(key):
                 pass
+        return self
 
     @contextmanager
     def drag(self, button: int = 0):
@@ -273,7 +274,7 @@ class VNC:
         self.mouse_buttons |= mask
         self._write_mouse()
         try:
-            yield
+            yield self
         finally:
             self.mouse_buttons &= ~mask
             self._write_mouse()
@@ -286,6 +287,7 @@ class VNC:
 
         with self.drag(1):
             yield
+        return self
 
     @contextmanager
     def right_drag(self):
@@ -295,6 +297,7 @@ class VNC:
 
         with self.drag(2):
             yield
+        return self
 
     def click(self, button: int = 0):
         """
@@ -303,6 +306,7 @@ class VNC:
 
         with self.drag(button):
             pass
+        return self
 
     def double_click(self, button: int = 0):
         """
@@ -311,6 +315,7 @@ class VNC:
 
         self.click(button)
         self.click(button)
+        return self
 
     def middle_click(self):
         """
@@ -318,6 +323,7 @@ class VNC:
         """
 
         self.click(1)
+        return self
 
     def right_click(self):
         """
@@ -325,6 +331,7 @@ class VNC:
         """
 
         self.click(2)
+        return self
 
     def scroll_up(self, repeat: int = 1):
         """
@@ -333,6 +340,7 @@ class VNC:
 
         for _ in range(repeat):
             self.click(3)
+        return self
 
     def scroll_down(self, repeat: int = 1):
         """
@@ -341,6 +349,7 @@ class VNC:
 
         for _ in range(repeat):
             self.click(4)
+        return self
 
     def move(self, x: int, y: int):
         """
@@ -350,3 +359,4 @@ class VNC:
         self.mouse_x = x
         self.mouse_y = y
         self._write_mouse()
+        return self
