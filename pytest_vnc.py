@@ -101,6 +101,9 @@ def vnc(pytestconfig):
 
     # Negotiate an authentication type
     auth_types = set(read(sock, read_int(sock, 1)))
+    if not auth_types:
+        reason = read(sock, read_int(sock, 4))
+        raise ValueError(reason.decode('utf8'))
     for auth_type in (33, 1, 2):
         if auth_type in auth_types:
             sock.sendall(auth_type.to_bytes(1, 'big'))
