@@ -70,3 +70,10 @@ The following configuration options can be set in ``pytest.ini``:
   VNC username (default: env var: ``PYTEST_VNC_USER`` or current user)
 ``vnc_passwd``
   VNC password (default: env var: ``PYTEST_VNC_PASSWD``)
+
+The following attributes can be set on the ``vnc`` object:
+
+``speed``
+  Interactions per second (default: 20)
+``sleep``
+  Callable that accepts a duration in seconds and waits for that long (default: ``time.sleep()``)
