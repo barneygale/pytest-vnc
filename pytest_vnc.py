@@ -180,12 +180,12 @@ class VNC:
     def _write_key(self, key: str):
         data = key_codes[key].to_bytes(4, 'big')
         self.sock.sendall(b'\x04\x01\x00\x00' + data)
-        sleep(1.0 / self.speed)
+        self.sleep(1.0 / self.speed)
         try:
             yield
         finally:
             self.sock.sendall(b'\x04\x00\x00\x00' + data)
-            sleep(1.0 / self.speed)
+            self.sleep(1.0 / self.speed)
 
     def _write_mouse(self):
         self.sock.sendall(
@@ -193,7 +193,11 @@ class VNC:
             self.mouse_buttons.to_bytes(1, 'big') +
             self.mouse_x.to_bytes(2, 'big') +
             self.mouse_y.to_bytes(2, 'big'))
-        sleep(1.0 / self.speed)
+        self.sleep(1.0 / self.speed)
+
+    @classmethod
+    def sleep(cls, duration):
+        sleep(duration)
 
     def capture(self, x: int = 0, y: int = 0, width: int = 0, height: int = 0) -> np.ndarray:
         """
