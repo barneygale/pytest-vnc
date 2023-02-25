@@ -158,7 +158,8 @@ def vnc(pytestconfig):
                  b'\x20\x18\x00\x01\x00\xff\x00\xff'
                  b'\x00\xff\x00\x08\x10\x00\x00\x00'
                  b'\x02\x00\x00\x01\x00\x00\x00\x06')
-    return VNC(sock, decompressobj().decompress, width, height, speed)
+    yield VNC(sock, decompressobj().decompress, width, height, speed)
+    sock.close()
 
 
 @dataclass
