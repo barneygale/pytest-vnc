@@ -33,6 +33,9 @@ key_codes['Shift'] = key_codes['Shift_L']
 key_codes['Backspace'] = key_codes['BackSpace']
 key_codes['Space'] = key_codes['space']
 
+encodings = {
+    6,  # zlib
+}
 
 # Colour channel orders
 pixel_formats: Dict[str, bytes] = {
@@ -170,9 +173,9 @@ def vnc(pytestconfig):
     height = read_int(sock, 2)
     read(sock, 16)
     read(sock, read_int(sock, 4))
-    sock.sendall(b'\x00\x00\x00\x00' +
-                 pixel_formats[pixel_format] +
-                 b'\x02\x00\x00\x01\x00\x00\x00\x06')
+    sock.sendall(b'\x00\x00\x00\x00' + pixel_formats[pixel_format] +
+                 b'\x02\x00' + len(encodings).to_bytes(2, 'big') +
+                 b''.join(encoding.to_bytes(4, 'big') for encoding in encodings))
     yield VNC(sock, decompressobj().decompress, width, height, speed)
     sock.close()
 
