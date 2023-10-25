@@ -34,6 +34,15 @@ key_codes['Backspace'] = key_codes['BackSpace']
 key_codes['Space'] = key_codes['space']
 
 
+# Colour channel orders
+pixel_formats: Dict[str, bytes] = {
+     'bgra': b'\x20\x18\x00\x01\x00\xff\x00\xff\x00\xff\x10\x08\x00\x00\x00\x00',
+     'rgba': b'\x20\x18\x00\x01\x00\xff\x00\xff\x00\xff\x00\x08\x10\x00\x00\x00',
+     'argb': b'\x20\x18\x01\x01\x00\xff\x00\xff\x00\xff\x10\x08\x00\x00\x00\x00',
+     'abgr': b'\x20\x18\x01\x01\x00\xff\x00\xff\x00\xff\x00\x08\x10\x00\x00\x00',
+}
+
+
 def read(sock: socket, length: int) -> bytes:
     """
     Read *length* bytes from the given socket.
@@ -75,6 +84,7 @@ def pytest_addoption(parser):
     parser.addini('vnc_port', 'vnc port (default: 5900)')
     parser.addini('vnc_speed', 'vnc interactions per second (default: 20)')
     parser.addini('vnc_timeout', 'vnc connection timeout in seconds (default: 5)')
+    parser.addini('vnc_pixel_format', 'vnc colour channel order (default: rgba)')
     parser.addini('vnc_user', 'vnc username (default: env: PYTEST_VNC_USER or current user)')
     parser.addini('vnc_passwd', 'vnc password (default: env: PYTEST_VNC_PASSWD)')
 
@@ -90,6 +100,7 @@ def vnc(pytestconfig):
     port = int(pytestconfig.getini('vnc_port') or '5900')
     speed = float(pytestconfig.getini('vnc_speed') or '20.0')
     timeout = float(pytestconfig.getini('vnc_timeout') or '5.0')
+    pixel_format = pytestconfig.getini('vnc_pixel_format') or 'rgba'
     user = pytestconfig.getini('vnc_user') or environ.get('PYTEST_VNC_USER') or getuser()
     passwd = pytestconfig.getini('vnc_passwd') or environ.get('PYTEST_VNC_PASSWD')
 
@@ -155,9 +166,8 @@ def vnc(pytestconfig):
     height = read_int(sock, 2)
     read(sock, 16)
     read(sock, read_int(sock, 4))
-    sock.sendall(b'\x00\x00\x00\x00'
-                 b'\x20\x18\x00\x01\x00\xff\x00\xff'
-                 b'\x00\xff\x00\x08\x10\x00\x00\x00'
+    sock.sendall(b'\x00\x00\x00\x00' +
+                 pixel_formats[pixel_format] +
                  b'\x02\x00\x00\x01\x00\x00\x00\x06')
     yield VNC(sock, decompressobj().decompress, width, height, speed)
     sock.close()

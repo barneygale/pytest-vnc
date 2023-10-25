@@ -66,6 +66,8 @@ The following configuration options can be set in ``pytest.ini``:
   VNC interactions per second (default: 20)
 ``vnc_timeout``
   VNC connection timeout in seconds (default: 5)
+``vnc_pixel_format``
+  VNC colour channel order (default: rgba)
 ``vnc_user``
   VNC username (default: env var: ``PYTEST_VNC_USER`` or current user)
 ``vnc_passwd``
