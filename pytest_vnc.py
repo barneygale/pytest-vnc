@@ -1,4 +1,6 @@
+from abc import ABC, abstractmethod
 from contextlib import contextmanager, ExitStack
+from collections import namedtuple
 from dataclasses import dataclass, field
 from getpass import getuser
 from os import environ, urandom
@@ -41,6 +43,31 @@ pixel_formats: Dict[str, bytes] = {
      'argb': b'\x20\x18\x01\x01\x00\xff\x00\xff\x00\xff\x10\x08\x00\x00\x00\x00',
      'abgr': b'\x20\x18\x01\x01\x00\xff\x00\xff\x00\xff\x00\x08\x10\x00\x00\x00',
 }
+
+
+Point = namedtuple('Point', 'x y')
+Rect = namedtuple('Rect', 'x y width height')
+
+
+class PointLike(ABC):
+    @abstractmethod
+    def get_point(self) -> Point:
+        pass
+
+
+class RectLike(ABC):
+    @abstractmethod
+    def get_rect(self) -> Rect:
+        pass
+
+
+def slice_rect(rect, *channels):
+    """
+    A sequence of slice objects that can be used to address a numpy array.
+    """
+
+    return (slice(rect.y, rect.y + rect.height),
+            slice(rect.x, rect.x + rect.width)) + channels
 
 
 def read(sock: socket, length: int) -> bytes:
@@ -162,14 +189,13 @@ def vnc(pytestconfig):
 
     # Negotiate pixel format and encodings
     sock.sendall(b'\x01')
-    width = read_int(sock, 2)
-    height = read_int(sock, 2)
+    rect = Rect(0, 0, read_int(sock, 2), read_int(sock, 2))
     read(sock, 16)
     read(sock, read_int(sock, 4))
     sock.sendall(b'\x00\x00\x00\x00' +
                  pixel_formats[pixel_format] +
                  b'\x02\x00\x00\x01\x00\x00\x00\x06')
-    yield VNC(sock, decompressobj().decompress, width, height, speed)
+    yield VNC(sock, decompressobj().decompress, speed, rect)
     sock.close()
 
 
@@ -181,11 +207,9 @@ class VNC:
 
     sock: socket = field(repr=False)
     decompress: Callable[[bytes], bytes] = field(repr=False)
-    width: int
-    height: int
     speed: float
-    mouse_x: int = 0
-    mouse_y: int = 0
+    rect: Rect
+    mouse_position: Point = Point(0, 0)
     mouse_buttons: int = 0
 
     @contextmanager
@@ -203,28 +227,30 @@ class VNC:
         self.sock.sendall(
             b'\x05' +
             self.mouse_buttons.to_bytes(1, 'big') +
-            self.mouse_x.to_bytes(2, 'big') +
-            self.mouse_y.to_bytes(2, 'big'))
+            self.mouse_position.x.to_bytes(2, 'big') +
+            self.mouse_position.y.to_bytes(2, 'big'))
         self.sleep(1.0 / self.speed)
 
     @classmethod
     def sleep(cls, duration):
         sleep(duration)
 
-    def capture(self, x: int = 0, y: int = 0, width: int = 0, height: int = 0) -> np.ndarray:
+    def capture(self, rect: Rect | RectLike | None = None) -> np.ndarray:
         """
         Takes a screenshot and returns its pixels as an RGBA numpy array.
         """
 
-        width = width or (self.width - x)
-        height = height or (self.height - y)
+        if rect is None:
+            rect = self.rect
+        elif isinstance(rect, RectLike):
+            rect = rect.get_rect()
         self.sock.sendall(
             b'\x03\x00' +
-            x.to_bytes(2, 'big') +
-            y.to_bytes(2, 'big') +
-            width.to_bytes(2, 'big') +
-            height.to_bytes(2, 'big'))
-        pixels = np.zeros((self.height, self.width, 4), 'B')
+            rect.x.to_bytes(2, 'big') +
+            rect.y.to_bytes(2, 'big') +
+            rect.width.to_bytes(2, 'big') +
+            rect.height.to_bytes(2, 'big'))
+        pixels = np.zeros((self.rect.height, self.rect.width, 4), 'B')
         while True:
             update_type = read_int(self.sock, 1)
             if update_type == 2:  # clipboard
@@ -232,24 +258,22 @@ class VNC:
             elif update_type == 0:  # video
                 read(self.sock, 1)  # padding
                 for _ in range(read_int(self.sock, 2)):
-                    area_x = read_int(self.sock, 2)
-                    area_y = read_int(self.sock, 2)
-                    area_width = read_int(self.sock, 2)
-                    area_height = read_int(self.sock, 2)
+                    area_rect = Rect(
+                        read_int(self.sock, 2), read_int(self.sock, 2),
+                        read_int(self.sock, 2), read_int(self.sock, 2))
                     area_encoding = read_int(self.sock, 4)
                     if area_encoding == 0:  # Raw
-                        area = read(self.sock, area_height * area_width * 4)
+                        area = read(self.sock, area_rect.height * area_rect.width * 4)
                     elif area_encoding == 6:  # ZLib
                         area = read(self.sock, read_int(self.sock, 4))
                         area = self.decompress(area)
                     else:
                         raise ValueError(f'unsupported VNC encoding: {area_encoding}')
-                    area = np.ndarray((area_height, area_width, 4), 'B', area)
-                    pixels[area_y:area_y + area_height, area_x:area_x + area_width] = area
-                    pixels[area_y:area_y + area_height, area_x:area_x + area_width, 3] = 255
-                result = pixels[y:y + height, x:x + width]
-                if result[:, :, 3].all():
-                    return result
+                    area = np.ndarray((area_rect.height, area_rect.width, 4), 'B', area)
+                    pixels[slice_rect(area_rect)] = area
+                    pixels[slice_rect(area_rect, 3)] = 255
+                if pixels[slice_rect(rect, 3)].all():
+                    return pixels[slice_rect(rect)]
             else:
                 raise ValueError(f'unsupported VNC update type: {update_type}')
 
@@ -370,12 +394,13 @@ class VNC:
             self.click(4)
         return self
 
-    def move(self, x: int, y: int):
+    def move(self, point: Point | PointLike):
         """
         Moves the mouse cursor to the given co-ordinates.
         """
 
-        self.mouse_x = x
-        self.mouse_y = y
+        if isinstance(point, PointLike):
+            point = point.get_point()
+        self.mouse_position = point
         self._write_mouse()
         return self
