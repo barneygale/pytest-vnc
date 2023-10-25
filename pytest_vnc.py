@@ -31,6 +31,7 @@ key_codes['Ctrl'] = key_codes['Control_L']
 key_codes['Super'] = key_codes['Super_L']
 key_codes['Shift'] = key_codes['Shift_L']
 key_codes['Backspace'] = key_codes['BackSpace']
+key_codes['Space'] = key_codes['space']
 
 
 def read(sock: socket, length: int) -> bytes:
