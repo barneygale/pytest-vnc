@@ -13,11 +13,14 @@ capture screenshots and send keyboard & mouse from your pytest tests:
 
 .. code-block:: python
 
+    from pytest_vnc import Rect, Point
+
+
     def test_thing(vnc):
         # Screenshot
-        print(vnc.width, vnc.height)
+        print(vnc.rect.width, vnc.rect.height)
         pixels = vnc.capture()  # rgba numpy array of entire screen
-        pixels = vnc.capture(x=100, y=0, width=50, height=75)
+        pixels = vnc.capture(Rect(x=100, y=0, width=50, height=75))
         # to use PIL/pillow:
         # image = Image.fromarray(pixels)
 
@@ -28,7 +31,7 @@ capture screenshots and send keyboard & mouse from your pytest tests:
             vnc.press('Esc')
 
         # Mouse input
-        vnc.move(100, 200)
+        vnc.move(Point(100, 200))
         vnc.click()
         vnc.double_click()
         vnc.middle_click()
@@ -36,11 +39,11 @@ capture screenshots and send keyboard & mouse from your pytest tests:
         vnc.scroll_up()
         vnc.scroll_down(repeat=10)
         with vnc.drag():
-            vnc.move(300, 400)
+            vnc.move(Point(300, 400))
         with vnc.middle_drag():
-            vnc.move(500, 600)
+            vnc.move(Point(500, 600))
         with vnc.right_drag():
-            vnc.move(700, 800)
+            vnc.move(Point(700, 800))
 
 
 Installation
