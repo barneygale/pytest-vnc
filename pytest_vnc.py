@@ -35,6 +35,9 @@ key_codes['Shift'] = key_codes['Shift_L']
 key_codes['Backspace'] = key_codes['BackSpace']
 key_codes['Space'] = key_codes['space']
 
+encodings = {
+    6,  # zlib
+}
 
 # Colour channel orders
 pixel_formats: Dict[str, bytes] = {
@@ -145,7 +148,6 @@ def vnc(pytestconfig):
         raise ValueError(reason.decode('utf8'))
     for auth_type in (33, 1, 2):
         if auth_type in auth_types:
-            sock.sendall(auth_type.to_bytes(1, 'big'))
             break
     else:
         raise ValueError(f'unsupported VNC auth types: {auth_types}')
@@ -154,7 +156,7 @@ def vnc(pytestconfig):
     if auth_type == 33:
         if not passwd:
             raise ValueError('VNC server requires password')
-        sock.sendall(b'\x00\x00\x00\x0a\x01\x00RSA1\x00\x00\x00\x00')
+        sock.sendall(b'\x21\x00\x00\x00\x0a\x01\x00RSA1\x00\x00\x00\x00')
         read(sock, 6)  # padding
         host_key = load_der_public_key(read(sock, read_int(sock, 4)))
         read(sock, 1)  # padding
@@ -167,13 +169,18 @@ def vnc(pytestconfig):
         read(sock, 4)  # padding
 
     # VNC authentication
-    if auth_type == 2:
+    elif auth_type == 2:
+        sock.sendall(b'\x02')
         if not passwd:
             raise ValueError('VNC server requires password')
         des_key = passwd.encode('ascii')[:8].ljust(8, b'\x00')
         des_key = bytes(int(bin(n)[:1:-1].ljust(8, '0'), 2) for n in des_key)
         encryptor = Cipher(TripleDES(des_key), ECB()).encryptor()
         sock.sendall(encryptor.update(read(sock, 16)) + encryptor.finalize())
+
+    # No authentication
+    elif auth_type == 1:
+        sock.sendall(b'\x01')
 
     # Check auth result
     auth_result = read_int(sock, 4)
@@ -192,9 +199,9 @@ def vnc(pytestconfig):
     rect = Rect(0, 0, read_int(sock, 2), read_int(sock, 2))
     read(sock, 16)
     read(sock, read_int(sock, 4))
-    sock.sendall(b'\x00\x00\x00\x00' +
-                 pixel_formats[pixel_format] +
-                 b'\x02\x00\x00\x01\x00\x00\x00\x06')
+    sock.sendall(b'\x00\x00\x00\x00' + pixel_formats[pixel_format] +
+                 b'\x02\x00' + len(encodings).to_bytes(2, 'big') +
+                 b''.join(encoding.to_bytes(4, 'big') for encoding in encodings))
     yield VNC(sock, decompressobj().decompress, speed, rect)
     sock.close()
 
