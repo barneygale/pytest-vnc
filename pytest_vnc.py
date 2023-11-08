@@ -6,7 +6,7 @@ from getpass import getuser
 from os import environ, urandom
 from socket import socket, create_connection
 from time import sleep
-from typing import Callable, Dict
+from typing import Callable, Dict, Union
 from zlib import decompressobj
 
 import pytest
@@ -242,7 +242,7 @@ class VNC:
     def sleep(cls, duration):
         sleep(duration)
 
-    def capture(self, rect: Rect | RectLike | None = None) -> np.ndarray:
+    def capture(self, rect: Union[Rect, RectLike, None] = None) -> np.ndarray:
         """
         Takes a screenshot and returns its pixels as an RGBA numpy array.
         """
@@ -401,7 +401,7 @@ class VNC:
             self.click(4)
         return self
 
-    def move(self, point: Point | PointLike):
+    def move(self, point: Union[Point, PointLike]):
         """
         Moves the mouse cursor to the given co-ordinates.
         """
