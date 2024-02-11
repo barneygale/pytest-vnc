@@ -150,7 +150,9 @@ def vnc(pytestconfig):
         if auth_type in auth_types:
             break
     else:
-        raise ValueError(f'unsupported VNC auth types: {auth_types}')
+        auth_type = None
+        if len(auth_types) > 0:
+            raise ValueError(f'unsupported VNC auth types: {auth_types}')
 
     # Apple authentication
     if auth_type == 33:
